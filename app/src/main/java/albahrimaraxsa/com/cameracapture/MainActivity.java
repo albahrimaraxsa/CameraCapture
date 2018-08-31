@@ -5,10 +5,12 @@ import android.app.Activity;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.res.Configuration;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Matrix;
 import android.hardware.Camera;
 import android.media.CamcorderProfile;
 import android.media.MediaRecorder;
@@ -198,8 +200,7 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
         jpegCallback = new Camera.PictureCallback() {
             public void onPictureTaken(byte[] data, Camera camera) {
                 try {
-                    Bitmap b= BitmapFactory.decodeByteArray(data , 0, data.length);
-                    saveImage(b);
+                    saveImage(setImageRotateBeforeSave(data));//rotate dlu sebelum disave pake function setImageRotateBeforeSave()
                     Log.d("Log", "onPictureTaken - wrote bytes: " + data.length);
                 } catch (Exception e) {
                     Log.d("Error", e.toString());
@@ -295,7 +296,7 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
         }
         recorder.setAudioSource(MediaRecorder.AudioSource.DEFAULT);
         recorder.setVideoSource(MediaRecorder.VideoSource.DEFAULT);
-
+        recorder.setOrientationHint(90);
         recorder.setProfile(camcorderProfile);
     }
     private void prepareRecorder(String namaVideo) {
@@ -422,7 +423,7 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
         String imageName = String.valueOf( System.currentTimeMillis())+".jpg";//image name
         try {
             FileOutputStream outStream  = new FileOutputStream(getFilePath(imageName));
-            bitmap.compress(Bitmap.CompressFormat.JPEG,100,outStream);
+            bitmap.compress(Bitmap.CompressFormat.JPEG,40,outStream);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -453,6 +454,30 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
             result = (info.orientation - degrees + 360) % 360;
         }
         camera.setDisplayOrientation(result);
+    }
+
+    //function untuk rotate imagenya
+    public Bitmap setImageRotateBeforeSave(byte[] data){
+        int screenWidth = getResources().getDisplayMetrics().widthPixels;
+        int screenHeight = getResources().getDisplayMetrics().heightPixels;
+        Bitmap bm = BitmapFactory.decodeByteArray(data, 0, (data != null) ? data.length : 0);
+
+        if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) {
+            // Notice that width and height are reversed
+            Bitmap scaled = Bitmap.createScaledBitmap(bm, screenHeight, screenWidth, true);
+            int w = scaled.getWidth();
+            int h = scaled.getHeight();
+            // Setting post rotate to 90
+            Matrix mtx = new Matrix();
+            mtx.postRotate(90);
+            // Rotating Bitmap
+            bm = Bitmap.createBitmap(scaled, 0, 0, w, h, mtx, true);
+        }else{// LANDSCAPE MODE
+            //No need to reverse width and height
+            Bitmap scaled = Bitmap.createScaledBitmap(bm, screenWidth,screenHeight , true);
+            bm=scaled;
+        }
+        return bm;
     }
 
 }
